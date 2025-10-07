@@ -1,9 +1,8 @@
-
 # Windows Server II - Vagrant template
 #  2025-2026
 # ------------------------------------
 #                                      
-# This is the Vagrantfile for the assignment of Windows Server II - 2025-2026. 
+# This is the Vagrantfile for the assignment of Windows Server II - 2025-2026.
 # The setup consists of 2 Windows Server machines (no GUI) and 1 Windows 10 client.
 #
 # Use `vagrant up` to bring up the environment, 
@@ -23,6 +22,7 @@
 # You are allowed to add lines for automatic provisioning
 
 Vagrant.configure("2") do |config|
+  
   # Server 1
   config.vm.define "server1" do |server1|
     # This is the base image for the VM - do not change this!
@@ -43,7 +43,21 @@ Vagrant.configure("2") do |config|
       # 2vCPU
       vb.cpus = "2"
     end
+
+    # --- AUTOMATISERING SERVER 1 ---
+    # FINALE CORRECTIE: Gebruik ENKELE aanhalingstekens om de syntax correct door te geven aan PowerShell.
+    server1.vm.provision "shell", inline: 'Set-SConfig -AutoLaunch $false', run: "always"
+
+    # Deel 1: Configureren tot aan de reboot
+    server1.vm.provision "shell", path: "scripts/config-server1-part1.ps1", run: "once"
+    # Herstart de machine
+    server1.vm.provision "reload"
+    # Deel 2: De rest van de configuratie na de reboot
+    server1.vm.provision "shell", path: "scripts/config-server1-part2.ps1", run: "once"
   end
+
+
+
 
   # Server 2
   config.vm.define "server2" do |server2|
@@ -57,6 +71,14 @@ Vagrant.configure("2") do |config|
       vb.memory = "3072"
       vb.cpus = "2"
     end
+
+ 
+   # FINALE CORRECTIE: Gebruik ENKELE aanhalingstekens.
+    server2.vm.provision "shell", inline: 'Set-SConfig -AutoLaunch $false', run: "always"
+    
+    server2.vm.provision "shell", path: "scripts/config-server2-part1.ps1", run: "once"
+    server2.vm.provision "reload"
+    server2.vm.provision "shell", path: "scripts/config-server2-part2.ps1", run: "once"
   end
 
   # Client
@@ -71,10 +93,16 @@ Vagrant.configure("2") do |config|
       vb.memory = "2048"
       vb.cpus = "2"
     end
+
+    # --- AUTOMATISERING CLIENT ---
+    client.vm.provision "shell", path: "scripts/config-client-part1.ps1", run: "once"
+    client.vm.provision "reload"
+    client.vm.provision "shell", path: "scripts/config-client-part2.ps1", run: "once"
   end
+
+
 
   # Is Hyper-V volledig uitgeschakeld, maar krijg je nog steeds timeouts bij uitrollen van de client?
   # Verwijder dan het #-teken voor de onderstaande regel om de timeout te verhogen - indien nodig kan je de waarde nog aanpassen (default is 300 seconden)
-  config.vm.boot_timeout = 600
+  config.vm.boot_timeout = 1200
 end
-  
