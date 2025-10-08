@@ -2,9 +2,9 @@
 # Script:  config-server1-part2.ps1 (NA de reboot)
 # ================================================================= #
 $voornaam = "Jamie"
-Write-Host "Stap 4: Standaardwachtwoord voor nieuwe gebruikers instellen..."
-$credential = Get-Credential -UserName "NieuweGebruikers" -Message "Voer het standaardwachtwoord in voor Admin1, Admin2, User1 en User2"
-$wachtwoord = $credential.Password
+# Gebruik een standaard, veilig wachtwoord voor volledige automatisering
+$wachtwoord = ConvertTo-SecureString "Vagrant123!" -AsPlainText -Force
+
 Write-Host "Stap 5: OU's en gebruikers aanmaken..."
 New-ADOrganizationalUnit -Name "Beheer" -Path "DC=WS2-25-$voornaam,DC=hogent"
 New-ADOrganizationalUnit -Name "Staf" -Path "DC=WS2-25-$voornaam,DC=hogent"

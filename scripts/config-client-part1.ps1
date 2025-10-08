@@ -8,6 +8,8 @@ Write-Host "Stap 1: DNS-server instellen op server1..."
 $netAdapter = Get-NetAdapter | Where-Object { $_.InterfaceIndex -eq (Get-NetAdapter | Sort-Object InterfaceIndex)[1].InterfaceIndex }
 Set-DnsClientServerAddress -InterfaceIndex $netAdapter.InterfaceIndex -ServerAddresses "192.168.25.10"
 
-Write-Host "Stap 2: Client toevoegen aan het domein... DEZE VM ZAL HERSTARTEN"
-$credential = Get-Credential -UserName "WS2-25-$voornaam\Admin1" -Message "Voer het wachtwoord in voor de domeinbeheerder"
-Add-Computer -DomainName "WS2-25-$voornaam.hogent" -Credential $credential -Restart
+# ... (bovenaan het script, na de netwerkconfiguratie)
+Write-Host "Stap 2: Machine toevoegen aan het domein... DEZE VM ZAL HERSTARTEN"
+$wachtwoord = ConvertTo-SecureString "Vagrant123!" -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential("WS2-25-$voornaam\Admin1", $wachtwoord)
+Add-Computer -DomainName "WS2-25-$voornaam.hogent" -Credential $credential -Restart -Force

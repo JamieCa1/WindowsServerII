@@ -41,20 +41,21 @@ Vagrant.configure("2") do |config|
       # 2GB vRAM
       vb.memory = "2048"
       # 2vCPU
-      vb.cpus = "2"
+      vb.cpus = "6"
     end
 
-    # --- AUTOMATISERING SERVER 1 ---
-    # FINALE CORRECTIE: Gebruik ENKELE aanhalingstekens om de syntax correct door te geven aan PowerShell.
-    server1.vm.provision "shell", inline: 'Set-SConfig -AutoLaunch $false', run: "always"
-
-    # Deel 1: Configureren tot aan de reboot
-    server1.vm.provision "shell", path: "scripts/config-server1-part1.ps1", run: "once"
-    # Herstart de machine
+    # FASE 1: Installeer alleen de rollen en herstart
+    server1.vm.provision "shell", path: "scripts/install-roles.ps1", run: "once"
     server1.vm.provision "reload"
-    # Deel 2: De rest van de configuratie na de reboot
+    
+    # FASE 2: Promoveer tot domeincontroller en herstart
+    server1.vm.provision "shell", path: "scripts/config-server1-part1.ps1", run: "once"
+    server1.vm.provision "reload"
+    
+    # FASE 3: Voer de rest van de configuratie uit
     server1.vm.provision "shell", path: "scripts/config-server1-part2.ps1", run: "once"
   end
+
 
 
 
@@ -72,10 +73,7 @@ Vagrant.configure("2") do |config|
       vb.cpus = "2"
     end
 
- 
-   # FINALE CORRECTIE: Gebruik ENKELE aanhalingstekens.
-    server2.vm.provision "shell", inline: 'Set-SConfig -AutoLaunch $false', run: "always"
-    
+
     server2.vm.provision "shell", path: "scripts/config-server2-part1.ps1", run: "once"
     server2.vm.provision "reload"
     server2.vm.provision "shell", path: "scripts/config-server2-part2.ps1", run: "once"
@@ -94,12 +92,10 @@ Vagrant.configure("2") do |config|
       vb.cpus = "2"
     end
 
-    # --- AUTOMATISERING CLIENT ---
     client.vm.provision "shell", path: "scripts/config-client-part1.ps1", run: "once"
     client.vm.provision "reload"
     client.vm.provision "shell", path: "scripts/config-client-part2.ps1", run: "once"
   end
-
 
 
   # Is Hyper-V volledig uitgeschakeld, maar krijg je nog steeds timeouts bij uitrollen van de client?
