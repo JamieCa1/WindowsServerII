@@ -44,15 +44,8 @@ Vagrant.configure("2") do |config|
       vb.cpus = "6"
     end
 
-    # FASE 1: Installeer alleen de rollen en herstart
-    server1.vm.provision "shell", path: "scripts/install-roles.ps1", run: "once"
-    server1.vm.provision "reload"
-    
-    # FASE 2: Promoveer tot domeincontroller en herstart
     server1.vm.provision "shell", path: "scripts/config-server1-part1.ps1", run: "once"
     server1.vm.provision "reload"
-    
-    # FASE 3: Voer de rest van de configuratie uit
     server1.vm.provision "shell", path: "scripts/config-server1-part2.ps1", run: "once"
   end
 
@@ -78,7 +71,6 @@ Vagrant.configure("2") do |config|
     server2.vm.provision "reload"
     server2.vm.provision "shell", path: "scripts/config-server2-part2.ps1", run: "once"
   end
-
   # Client
   config.vm.define "client" do |client|
     client.vm.box = "gusztavvargadr/windows-10-22h2-enterprise"
@@ -100,5 +92,5 @@ Vagrant.configure("2") do |config|
 
   # Is Hyper-V volledig uitgeschakeld, maar krijg je nog steeds timeouts bij uitrollen van de client?
   # Verwijder dan het #-teken voor de onderstaande regel om de timeout te verhogen - indien nodig kan je de waarde nog aanpassen (default is 300 seconden)
-  config.vm.boot_timeout = 1200
+  config.vm.boot_timeout = 1800
 end
