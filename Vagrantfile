@@ -32,6 +32,12 @@ Vagrant.configure("2") do |config|
     server1.vm.network "private_network", ip: "192.168.25.10", auto_config: false
     # Set the host name of the VM
     server1.vm.hostname = "server1"
+
+        # --- TOEGEVOEGDE WINRM CONFIGURATIE ---
+    server1.vm.communicator = "winrm"
+    server1.winrm.timeout = 1800 # Verhoog de timeout naar 30 minuten
+    server1.winrm.transport = :negotiate
+    
     # VirtualBox specific configuration
     server1.vm.provider "virtualbox" do |vb|
       # VirtualBox Display Name
@@ -39,19 +45,26 @@ Vagrant.configure("2") do |config|
       # VirtualBox Group
       vb.customize ["modifyvm", :id, "--groups", "/WS2"]
       # 2GB vRAM
-      vb.memory = "2048"
+      vb.memory = "4096"
       # 2vCPU
       vb.cpus = "6"
     end
 
-    server1.vm.provision "shell", path: "scripts/config-server1-part1.ps1", run: "once"
-    server1.vm.provision "reload"
+    # Script 1 uitvoeren met de 'vagrant' gebruiker
+    server1.vm.provision "shell", inline: "powershell -ExecutionPolicy Bypass -File C:/vagrant/scripts/config-server1-part1.ps1", run: "once"
+    
+    # --- CRUCIALE AANPASSING HIER ---
+    # Na de herstart (reload), veranderen we de WinRM gebruiker naar de domeinbeheerder
+    server1.vm.provision "reload", provisioner: "shell" do |s|
+      s.inline = "Write-Host 'Server is herstart na DC promotie. WinRM gebruiker wordt gewijzigd.'"
+      # Definieer hier de nieuwe gebruiker voor ALLE volgende provisioners
+      server1.winrm.username = "WS2-25-Jamie\\Admin1"
+      server1.winrm.password = "Vagrant123!"
+    end
+
+     # Script 2 wordt nu uitgevoerd met de 'Admin1' gebruiker
     server1.vm.provision "shell", path: "scripts/config-server1-part2.ps1", run: "once"
   end
-
-
-
-
 
   # Server 2
   config.vm.define "server2" do |server2|

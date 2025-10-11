@@ -5,6 +5,10 @@ $voornaam = "Jamie"
 # Gebruik een standaard, veilig wachtwoord voor volledige automatisering
 $wachtwoord = ConvertTo-SecureString "Vagrant123!" -AsPlainText -Force
 
+Write-Host "Stap 4: Resterende Windows-rollen installeren (DHCP, Certificaten, IIS)..."
+Install-WindowsFeature -Name DHCP, AD-Certificate, ADCS-Web-Enrollment, Web-Server, Web-Asp-Net45, NET-WCF-HTTP-Activation45, GPMC -IncludeManagementTools
+
+
 Write-Host "Stap 5: OU's en gebruikers aanmaken..."
 New-ADOrganizationalUnit -Name "Beheer" -Path "DC=WS2-25-$voornaam,DC=hogent"
 New-ADOrganizationalUnit -Name "Staf" -Path "DC=WS2-25-$voornaam,DC=hogent"
