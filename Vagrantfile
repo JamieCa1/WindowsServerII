@@ -21,7 +21,16 @@
 #   and to install and configure the required software.
 # You are allowed to add lines for automatic provisioning
 
+# Controleer of de server al gepromoveerd is door te zoeken naar een vlag-bestand.
+# Dit bepaalt welke gebruiker we moeten gebruiken voor WinRM.
+domain_provisioned = File.exist?('.dc_provisioned')
+
+
 Vagrant.configure("2") do |config|
+  
+    # Verhoog de algemene boot timeout. Essentieel voor een DC's eerste start.
+  config.vm.boot_timeout = 600
+
   
   # Server 1
   config.vm.define "server1" do |server1|
@@ -33,10 +42,26 @@ Vagrant.configure("2") do |config|
     # Set the host name of the VM
     server1.vm.hostname = "server1"
 
-        # --- TOEGEVOEGDE WINRM CONFIGURATIE ---
+    
     server1.vm.communicator = "winrm"
-    server1.winrm.timeout = 1800 # Verhoog de timeout naar 30 minuten
+    server1.winrm.timeout = 1800
     server1.winrm.transport = :negotiate
+    
+   # WinRM-instellingen voor het opvangen van de herstart.
+    server1.winrm.max_tries = 30
+    server1.winrm.retry_delay = 20
+
+    # --- CONDITIONELE GEBRUIKERSCONFIGURATIE ---
+    # Bepaal de gebruiker en het wachtwoord op basis van het vlag-bestand.
+    if domain_provisioned
+      puts "Domein is al geprovisioneerd. Gebruiker: WS2JAMIE\\Administrator"
+      server1.winrm.username = "WS2JAMIE\\Administrator"
+      server1.winrm.password = "Vagrant123!"
+    else
+      puts "Eerste provisioning. Gebruiker: vagrant"
+      server1.winrm.username = "vagrant"
+      server1.winrm.password = "vagrant"
+    end
     
     # VirtualBox specific configuration
     server1.vm.provider "virtualbox" do |vb|
@@ -50,21 +75,22 @@ Vagrant.configure("2") do |config|
       vb.cpus = "6"
     end
 
-    # Script 1 uitvoeren met de 'vagrant' gebruiker
-    server1.vm.provision "shell", inline: "powershell -ExecutionPolicy Bypass -File C:/vagrant/scripts/config-server1-part1.ps1", run: "once"
-    
-    # --- CRUCIALE AANPASSING HIER ---
-    # Na de herstart (reload), veranderen we de WinRM gebruiker naar de domeinbeheerder
-    server1.vm.provision "reload", provisioner: "shell" do |s|
-      s.inline = "Write-Host 'Server is herstart na DC promotie. WinRM gebruiker wordt gewijzigd.'"
-      # Definieer hier de nieuwe gebruiker voor ALLE volgende provisioners
-      server1.winrm.username = "WS2-25-Jamie\\Admin1"
-      server1.winrm.password = "Vagrant123!"
-    end
 
-     # Script 2 wordt nu uitgevoerd met de 'Admin1' gebruiker
+    # STAP 1: Promoveer tot DC (zonder zelf te herstarten).
+    server1.vm.provision "shell", 
+      inline: "powershell -ExecutionPolicy Bypass -File C:/vagrant/scripts/config-server1-part1.ps1", 
+      run: "once"
+
+    # STAP 2: Vagrant voert een gecontroleerde herstart uit.
+    server1.vm.provision "reload"
+
+    # STAP 3: Voeg een extra pauze toe. Dit is de sleutel.
+    server1.vm.provision "shell", inline: "Write-Host 'Wacht 60 seconden extra tot AD services volledig online zijn...'; Start-Sleep -Seconds 60", run: "once"
+
+    # STAP 4: Voer de rest van de configuratie uit.
     server1.vm.provision "shell", path: "scripts/config-server1-part2.ps1", run: "once"
   end
+
 
   # Server 2
   config.vm.define "server2" do |server2|

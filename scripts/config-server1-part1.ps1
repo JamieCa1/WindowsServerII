@@ -37,6 +37,7 @@ Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 
 Write-Host "Stap 3: Server promoten tot domeincontroller..."
 try {
+    New-Item -Path "C:\vagrant\.dc_provisioned" -ItemType File -Force
     $wachtwoord = ConvertTo-SecureString "Vagrant123!" -AsPlainText -Force
     Install-ADDSForest `
         -DomainName "WS2-25-$voornaam.hogent" `
