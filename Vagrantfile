@@ -76,13 +76,14 @@ Vagrant.configure("2") do |config|
     end
 
 
-    # STAP 1: Promoveer tot DC (zonder zelf te herstarten).
-    server1.vm.provision "shell", 
-      inline: "powershell -ExecutionPolicy Bypass -File C:/vagrant/scripts/config-server1-part1.ps1", 
-      run: "once"
+    # STAP 1: Promoveer tot DC en laat Windows zichzelf rebooten
+    server1.vm.provision "shell", inline: <<-SHELL
+      powershell -ExecutionPolicy Bypass -Command "& {C:/vagrant/scripts/config-server1-part1.ps1; Restart-Computer -Force}"
+    SHELL
 
-    # STAP 2: Vagrant voert een gecontroleerde herstart uit.
-    server1.vm.provision "reload"
+    # STAP 2: Wacht enkele minuten extra zodat Windows volledig opstart
+    server1.vm.provision "shell", inline: "Write-Host 'Wachten tot domeincontroller is opgestart...'; Start-Sleep -Seconds 180", run: "once"
+
 
     # STAP 3: Voeg een extra pauze toe. Dit is de sleutel.
     server1.vm.provision "shell", inline: "Write-Host 'Wacht 60 seconden extra tot AD services volledig online zijn...'; Start-Sleep -Seconds 60", run: "once"
