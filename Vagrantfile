@@ -21,17 +21,7 @@
 #   and to install and configure the required software.
 # You are allowed to add lines for automatic provisioning
 
-# Controleer of de server al gepromoveerd is door te zoeken naar een vlag-bestand.
-# Dit bepaalt welke gebruiker we moeten gebruiken voor WinRM.
-domain_provisioned = File.exist?('.dc_provisioned')
-
-
 Vagrant.configure("2") do |config|
-  
-    # Verhoog de algemene boot timeout. Essentieel voor een DC's eerste start.
-  config.vm.boot_timeout = 600
-
-  
   # Server 1
   config.vm.define "server1" do |server1|
     # This is the base image for the VM - do not change this!
@@ -41,28 +31,10 @@ Vagrant.configure("2") do |config|
     server1.vm.network "private_network", ip: "192.168.25.10", auto_config: false
     # Set the host name of the VM
     server1.vm.hostname = "server1"
+    # --- CRUCIALE TIMEOUT INSTELLINGEN ---
+    server1.winrm.transport = :plaintext
+    server1.winrm.basic_auth_only = true
 
-    
-    server1.vm.communicator = "winrm"
-    server1.winrm.timeout = 1800
-    server1.winrm.transport = :negotiate
-    
-   # WinRM-instellingen voor het opvangen van de herstart.
-    server1.winrm.max_tries = 30
-    server1.winrm.retry_delay = 20
-
-    # --- CONDITIONELE GEBRUIKERSCONFIGURATIE ---
-    # Bepaal de gebruiker en het wachtwoord op basis van het vlag-bestand.
-    if domain_provisioned
-      puts "Domein is al geprovisioneerd. Gebruiker: WS2JAMIE\\Administrator"
-      server1.winrm.username = "WS2JAMIE\\Administrator"
-      server1.winrm.password = "Vagrant123!"
-    else
-      puts "Eerste provisioning. Gebruiker: vagrant"
-      server1.winrm.username = "vagrant"
-      server1.winrm.password = "vagrant"
-    end
-    
     # VirtualBox specific configuration
     server1.vm.provider "virtualbox" do |vb|
       # VirtualBox Display Name
@@ -70,30 +42,23 @@ Vagrant.configure("2") do |config|
       # VirtualBox Group
       vb.customize ["modifyvm", :id, "--groups", "/WS2"]
       # 2GB vRAM
-      vb.memory = "4096"
+      vb.memory = "4048"
       # 2vCPU
-      vb.cpus = "6"
+      vb.cpus = "2"
     end
 
+# --- PROVISIONING MET NIEUWE SCRIPTS EN GEBRUIKERSWISSEL ---
 
-    # STAP 1: Promoveer tot DC en laat Windows zichzelf rebooten
-    server1.vm.provision "shell", inline: <<-SHELL
-      powershell -ExecutionPolicy Bypass -Command "& {C:/vagrant/scripts/config-server1-part1.ps1; Restart-Computer -Force}"
-    SHELL
-
-    # STAP 2: Wacht enkele minuten extra zodat Windows volledig opstart
-    server1.vm.provision "shell", inline: "Write-Host 'Wachten tot domeincontroller is opgestart...'; Start-Sleep -Seconds 180", run: "once"
-
-
-    # STAP 3: Voeg een extra pauze toe. Dit is de sleutel.
-    server1.vm.provision "shell", inline: "Write-Host 'Wacht 60 seconden extra tot AD services volledig online zijn...'; Start-Sleep -Seconds 60", run: "once"
-
-    # STAP 4: Voer de rest van de configuratie uit.
-    server1.vm.provision "shell", path: "scripts/config-server1-part2.ps1", run: "once"
+    # Fase 1: Voorbereiding en Promotie (als 'vagrant')
+    server1.vm.provision "shell", path: "scripts/01_network.ps1", run: "once", name: "Configure Network"
+    server1.vm.provision "shell", path: "scripts/02_install_adds_features.ps1", run: "once", name: "Install ADDS Features"
+    server1.vm.provision "shell", path: "scripts/03_promote_dc.ps1", run: "once", name: "Promote DC"
+    server1.vm.provision "shell", reboot: true
+    server1.vm.provision "shell", path: "scripts/04_post_dc_features_ca_firewall.ps1", run: "once", name: "Post-DC Features/CA/Firewall"
+    server1.vm.provision "shell", path: "scripts/05_final_config.ps1", run: "once", name: "Final Config (DHCP/DNS/Users/GPO)"
   end
 
-
-  # Server 2
+  # Server 2 (met vertraging)
   config.vm.define "server2" do |server2|
     server2.vm.box = "gusztavvargadr/windows-server-2025-standard-core"
     server2.vm.box_version = "2506.0.0"
@@ -106,12 +71,15 @@ Vagrant.configure("2") do |config|
       vb.cpus = "2"
     end
 
+    # Wacht even voor server1 klaar is
+    server2.vm.provision "shell", inline: "Start-Sleep -Seconds 60", run: "once" 
 
     server2.vm.provision "shell", path: "scripts/config-server2-part1.ps1", run: "once"
-    server2.vm.provision "reload"
+    server2.vm.provision "reload" 
     server2.vm.provision "shell", path: "scripts/config-server2-part2.ps1", run: "once"
   end
-  # Client
+
+  # Client (met vertraging)
   config.vm.define "client" do |client|
     client.vm.box = "gusztavvargadr/windows-10-22h2-enterprise"
     client.vm.box_version = "2506.0.0"
@@ -123,14 +91,13 @@ Vagrant.configure("2") do |config|
       vb.memory = "2048"
       vb.cpus = "2"
     end
+    
+    # Wacht even voor server1 klaar is
+    client.vm.provision "shell", inline: "Start-Sleep -Seconds 60", run: "once"
 
     client.vm.provision "shell", path: "scripts/config-client-part1.ps1", run: "once"
-    client.vm.provision "reload"
+    client.vm.provision "reload" 
     client.vm.provision "shell", path: "scripts/config-client-part2.ps1", run: "once"
   end
 
-
-  # Is Hyper-V volledig uitgeschakeld, maar krijg je nog steeds timeouts bij uitrollen van de client?
-  # Verwijder dan het #-teken voor de onderstaande regel om de timeout te verhogen - indien nodig kan je de waarde nog aanpassen (default is 300 seconden)
-  config.vm.boot_timeout = 1800
 end

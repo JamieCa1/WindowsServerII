@@ -54,8 +54,6 @@ try {
         -Force:$true
 
     # Markeer domein pas als succesvol aangemaakt
-    New-Item -Path "C:\vagrant\.dc_provisioned" -ItemType File -Force
-
     Write-Host "Promotie voltooid, herstart volgt via Vagrant."
     exit 0
 }
