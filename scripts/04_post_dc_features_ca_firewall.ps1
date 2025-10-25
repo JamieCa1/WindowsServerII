@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "--- Stap 4: Post-DC Configuratie (Features, CA, Firewall) ---" -ForegroundColor Green
 
 # Wacht tot AD volledig operationeel is (max 5 min)
-$maxAttempts = 30
+$maxAttempts = 60
 $attempt = 0
 Write-Host "Wachten tot Active Directory volledig operationeel is..."
 while ($attempt -lt $maxAttempts) {

@@ -30,7 +30,7 @@ try {
         -ForestMode "Win2025" `
         -InstallDns:$true `
         -SafeModeAdministratorPassword $SafeModePassword `
-        # -CreateDnsDelegation:$false ` # <-- DEZE REGEL IS VERWIJDERD/UIT COMMENTAAR
+        -CreateDnsDelegation:$false ` # <-- DEZE REGEL IS VERWIJDERD/UIT COMMENTAAR
         -DatabasePath "C:\Windows\NTDS" `
         -LogPath "C:\Windows\NTDS" `
         -SysvolPath "C:\Windows\SYSVOL" `
